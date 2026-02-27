@@ -1,5 +1,5 @@
 #!/bin/bash
-# Small-Hacker Core Library v2.1 - Modular & Intelligent Proxy Management
+# 小小核心库 v2.2 - 模块化与智能化代理管理
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; CYAN='\033[0;36m'; NC='\033[0m'
 WORKDIR="$HOME/.cyber-proxy"; BIN_DIR="$WORKDIR/bin"; CONFIG_FILE="$WORKDIR/config.json"
 SB_BINARY="$BIN_DIR/sing-box"; CF_BINARY="$BIN_DIR/cloudflared"; CERT_DIR="$WORKDIR/cert"
@@ -8,34 +8,34 @@ get_arch() { case "$(uname -m)" in x86_64) echo "amd64" ;; aarch64|arm64) echo "
 
 init_dirs() { mkdir -p "$BIN_DIR" "$CERT_DIR"; }
 
-# Pre-Audit: Environment & UDP Check
+# 预审计：环境与 UDP 检查
 pre_audit() {
-    echo -e "${BLUE}[Audit] Performing system health check...${NC}"
-    # Check for UDP support (basic test)
+    echo -e "${BLUE}[审计] 正在执行系统健康检查...${NC}"
+    # 检查 UDP 支持
     if timeout 2 bash -c 'cat < /dev/null > /dev/udp/8.8.8.8/53' 2>/dev/null; then
-        echo -e "${GREEN}[OK] UDP traffic appears to be allowed.${NC}"
+        echo -e "${GREEN}[OK] UDP 流量探测正常。${NC}"
     else
-        echo -e "${YELLOW}[WARN] UDP might be blocked by firewall. Hy2/Tuic may fail.${NC}"
+        echo -e "${YELLOW}[警告] UDP 可能被防火墙拦截，Hy2/Tuic 可能会失效。${NC}"
     fi
-    # Check for port conflicts
+    # 检查端口占用
     for port in 443 80 8080; do
         if ss -tuln | grep -q ":$port "; then
-            echo -e "${YELLOW}[WARN] Port $port is already in use.${NC}"
+            echo -e "${YELLOW}[警告] 端口 $port 已被占用。${NC}"
         fi
     done
 }
 
 download_components() {
     local ARCH=$(get_arch)
-    [[ "$ARCH" == "unknown" ]] && echo -e "${RED}Unsupported Arch${NC}" && exit 1
+    [[ "$ARCH" == "unknown" ]] && echo -e "${RED}不支持的架构${NC}" && exit 1
     if [ ! -f "$SB_BINARY" ]; then
-        echo -e "${BLUE}Downloading Sing-box...${NC}"
+        echo -e "${BLUE}正在下载 Sing-box...${NC}"
         local LATEST_SB=$(curl -s https://api.github.com/repos/SagerNet/sing-box/releases/latest | grep tag_name | cut -d '"' -f 4 | sed 's/v//')
         curl -L "https://github.com/SagerNet/sing-box/releases/download/v${LATEST_SB}/sing-box-${LATEST_SB}-linux-${ARCH}.tar.gz" -o /tmp/sb.tar.gz
         tar -xzf /tmp/sb.tar.gz -C /tmp && find /tmp -name "sing-box" -type f -exec mv {} "$SB_BINARY" \; && chmod +x "$SB_BINARY"
     fi
     if [ ! -f "$CF_BINARY" ]; then
-        echo -e "${BLUE}Downloading Cloudflared...${NC}"
+        echo -e "${BLUE}正在下载 Cloudflared...${NC}"
         curl -L "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-${ARCH}" -o "$CF_BINARY" && chmod +x "$CF_BINARY"
     fi
 }
@@ -69,5 +69,5 @@ cleanup() {
     rm -rf "$WORKDIR"
     sudo rm -f /etc/systemd/system/cyber-sb.service /etc/systemd/system/cyber-argo.service
     sudo systemctl daemon-reload
-    echo -e "${GREEN}Cleanup complete.${NC}"
+    echo -e "${GREEN}清理完成。${NC}"
 }
