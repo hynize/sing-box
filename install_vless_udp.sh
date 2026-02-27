@@ -1,5 +1,5 @@
 #!/bin/bash
-# 小小战神版 v2.2.3 - 智能监听与 Reality 增强
+# 小小战神版 v2.2.4 - Reality 终极修复版
 source ./lib/core.sh
 
 MODE=$1 # 'hy2', 'tuic', 'reality'
@@ -39,17 +39,22 @@ if [[ "$MODE" == "reality" ]]; then
     priv_key=$(echo "$key_pair" | grep "Private key" | awk '{print $3}')
     pub_key=$(echo "$key_pair" | grep "Public key" | awk '{print $3}')
     short_id=$(openssl rand -hex 8)
+    
+    # 提取目标地址和端口
     sni=$(echo $rd | cut -d: -f1)
+    dest_port=$(echo $rd | cut -d: -f2)
+    [ -z "$dest_port" ] && dest_port=443
     
     INBOUND_JSON='{
       "type": "vless", "tag": "vless-reality-in", "listen": "'$LADDR'", "listen_port": '$rp',
       "users": [{ "uuid": "'$uuid'", "flow": "xtls-rprx-vision" }],
       "tls": {
         "enabled": true, "server_name": "'$sni'", "reality": {
-          "enabled": true, "handshake": { "server": "'$sni'", "server_port": 443 },
+          "enabled": true, "handshake": { "server": "'$sni'", "server_port": '$dest_port' },
           "private_key": "'$priv_key'", "short_id": ["'$short_id'"]
         }
-      }
+      },
+      "packet_encoding": "xray"
     }'
 else
     generate_certs
@@ -92,14 +97,16 @@ fi
 
 clear
 echo -e "${CYAN}┌────────────────────────────────────────────────────────┐${NC}"
-echo -e "${CYAN}│          小小 Sing-box 战神版 v2.2.3 (智能双栈)         │${NC}"
+echo -e "${CYAN}│          小小 Sing-box 战神版 v2.2.4 (终极修复)        │${NC}"
 echo -e "${CYAN}└────────────────────────────────────────────────────────┘${NC}"
 
-IP=$(curl -s ifconfig.me || curl -s6 ifconfig.me)
+# 获取公网 IP (双栈支持)
+IP=$(curl -s4 ifconfig.me || curl -s6 ifconfig.me || curl -s ifconfig.me)
+
 if [[ "$MODE" == "reality" ]]; then
     echo -e "${BLUE} [基准信息: Reality]${NC}"
-    echo -e "  监听地址: ${GREEN}$LADDR${NC}"
-    echo -e "  端口:     ${GREEN}$rp${NC}"
+    echo -e "  监听端口: ${GREEN}$rp${NC}"
+    echo -e "  目标地址: ${GREEN}$sni:$dest_port${NC}"
     REALITY_LINK="vless://${uuid}@${IP}:${rp}?encryption=none&security=reality&sni=${sni}&fp=chrome&pbk=${pub_key}&sid=${short_id}&flow=xtls-rprx-vision&type=tcp#Reality_WarGod"
     echo -e "\n${CYAN}--- 节点链接 ---${NC}"
     echo -e "${YELLOW}Reality:${NC} $REALITY_LINK"
