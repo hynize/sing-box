@@ -27,7 +27,7 @@ else
     UDP_JSON='{ "type": "tuic", "tag": "tuic-in", "listen": "::", "listen_port": '$up', "users": [{ "uuid": "'$uuid'", "password": "'$pass'" }], "congestion_control": "bbr", "tls": { "enabled": true, "certificate_path": "'$CERT_DIR'/cert.pem", "key_path": "'$CERT_DIR'/privkey.pem", "alpn": ["h3"] } }'
 fi
 
-cat > "$CONFIG_FILE" <<EOF
+cat > "$CONFIG_FILE" <<EOC
 {
   "log": { "level": "error" },
   "inbounds": [
@@ -36,3 +36,32 @@ cat > "$CONFIG_FILE" <<EOF
   ],
   "outbounds": [{ "type": "direct" }]
 }
+EOC
+
+# Save state
+echo "$uuid" > "$WORKDIR/uuid.txt"; echo "$path" > "$WORKDIR/path.txt"; echo "$pass" > "$WORKDIR/pass.txt"; echo "$up" > "$WORKDIR/up.txt"; echo "$vp" > "$WORKDIR/vp.txt"
+
+# Services
+setup_systemd "cyber-sb" "$SB_BINARY run -c $CONFIG_FILE" "Cyber Sing-box"
+argo_token=$(cat "$WORKDIR/argo_token.txt" 2>/dev/null)
+if [ -n "$argo_token" ]; then
+    setup_systemd "cyber-argo" "$CF_BINARY tunnel run --token $argo_token" "Cyber Argo"
+else
+    setup_systemd "cyber-argo" "$CF_BINARY tunnel --url http://127.0.0.1:$vp" "Cyber Argo"
+fi
+
+# Link Gen
+echo -e "\n${GREEN}=== Deployment Success ===${NC}"
+IP=$(curl -s ifconfig.me); PREF="saas.sin.fan"
+ARGO_DM=$(cat "$WORKDIR/argo_domain.txt" 2>/dev/null)
+if [ -z "$ARGO_DM" ]; then
+    echo -e "${YELLOW}Waiting for Argo domain...${NC}"; sleep 10
+    ARGO_DM=$(sudo journalctl -u cyber-argo --no-hostname -n 50 | grep -o 'https://[a-zA-Z0-9-]*\.trycloudflare\.com' | tail -1 | sed 's#https://##')
+fi
+
+echo -e "${CYAN}[1] Vless+Argo:${NC} vless://${uuid}@${PREF}:443?encryption=none&security=tls&sni=${ARGO_DM}&host=${ARGO_DM}&type=ws&path=${path}#Argo"
+if [[ "$MODE" == "hy2" ]]; then
+    echo -e "${CYAN}[2] Hysteria2:${NC} hysteria2://${pass}@${IP}:${up}?sni=www.bing.com&insecure=1#Hy2"
+else
+    echo -e "${CYAN}[2] TUIC v5:${NC} tuic://${uuid}:${pass}@${IP}:${up}?sni=www.bing.com&alpn=h3&congestion_control=bbr&allow_insecure=1#Tuic"
+fi
