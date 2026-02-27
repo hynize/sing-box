@@ -1,5 +1,5 @@
 #!/bin/bash
-# 小小核心库 v2.2.1 - 随机伪装增强版
+# 小小核心库 v2.2.3 - 智能双栈探测版
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; CYAN='\033[0;36m'; NC='\033[0m'
 WORKDIR="$HOME/.cyber-proxy"; BIN_DIR="$WORKDIR/bin"; CONFIG_FILE="$WORKDIR/config.json"
 SB_BINARY="$BIN_DIR/sing-box"; CF_BINARY="$BIN_DIR/cloudflared"; CERT_DIR="$WORKDIR/cert"
@@ -7,6 +7,16 @@ SB_BINARY="$BIN_DIR/sing-box"; CF_BINARY="$BIN_DIR/cloudflared"; CERT_DIR="$WORK
 get_arch() { case "$(uname -m)" in x86_64) echo "amd64" ;; aarch64|arm64) echo "arm64" ;; *) echo "unknown" ;; esac; }
 
 init_dirs() { mkdir -p "$BIN_DIR" "$CERT_DIR"; }
+
+# 探测最佳监听地址
+get_listen_addr() {
+    # 如果存在 IPv6 地址，则优先使用 :: 以支持双栈或纯 v6
+    if [ -f /proc/net/if_inet6 ] && [ "$(cat /proc/net/if_inet6)" != "" ]; then
+        echo "::"
+    else
+        echo "0.0.0.0"
+    fi
+}
 
 # 预审计：环境与 UDP 检查
 pre_audit() {
@@ -34,7 +44,6 @@ download_components() {
 }
 
 generate_certs() {
-    # 随机选择证书伪装域名
     domains=("www.microsoft.com" "azure.microsoft.com" "www.apple.com" "swscan.apple.com" "www.intel.com" "www.debian.org" "www.docker.com" "www.hulu.com" "www.disneyplus.com" "www.amazon.com" "aws.amazon.com" "www.oracle.com" "www.jpmorganchase.com" "www.americanexpress.com" "images.apple.com" "www.samsung.com" "www.nvidia.com" "www.ikea.com" "www.sony.com" "www.toyota.com" "www.nintendo.co.jp" "www.hsbc.com" "www.cathaypacific.com" "www.hkex.com.hk")
     random_domain=${domains[$RANDOM % ${#domains[@]}]}
     local sni=${1:-$random_domain}
