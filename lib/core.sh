@@ -1,5 +1,5 @@
 #!/bin/bash
-# 小小核心库 v2.2 - 模块化与智能化代理管理
+# 小小核心库 v2.2.1 - 随机伪装增强版
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; CYAN='\033[0;36m'; NC='\033[0m'
 WORKDIR="$HOME/.cyber-proxy"; BIN_DIR="$WORKDIR/bin"; CONFIG_FILE="$WORKDIR/config.json"
 SB_BINARY="$BIN_DIR/sing-box"; CF_BINARY="$BIN_DIR/cloudflared"; CERT_DIR="$WORKDIR/cert"
@@ -11,18 +11,11 @@ init_dirs() { mkdir -p "$BIN_DIR" "$CERT_DIR"; }
 # 预审计：环境与 UDP 检查
 pre_audit() {
     echo -e "${BLUE}[审计] 正在执行系统健康检查...${NC}"
-    # 检查 UDP 支持
     if timeout 2 bash -c 'cat < /dev/null > /dev/udp/8.8.8.8/53' 2>/dev/null; then
         echo -e "${GREEN}[OK] UDP 流量探测正常。${NC}"
     else
         echo -e "${YELLOW}[警告] UDP 可能被防火墙拦截，Hy2/Tuic 可能会失效。${NC}"
     fi
-    # 检查端口占用
-    for port in 443 80 8080; do
-        if ss -tuln | grep -q ":$port "; then
-            echo -e "${YELLOW}[警告] 端口 $port 已被占用。${NC}"
-        fi
-    done
 }
 
 download_components() {
@@ -41,7 +34,10 @@ download_components() {
 }
 
 generate_certs() {
-    local sni=${1:-www.bing.com}
+    # 随机选择证书伪装域名
+    domains=("www.microsoft.com" "azure.microsoft.com" "www.apple.com" "swscan.apple.com" "www.intel.com" "www.debian.org" "www.docker.com" "www.hulu.com" "www.disneyplus.com" "www.amazon.com" "aws.amazon.com" "www.oracle.com" "www.jpmorganchase.com" "www.americanexpress.com" "images.apple.com" "www.samsung.com" "www.nvidia.com" "www.ikea.com" "www.sony.com" "www.toyota.com" "www.nintendo.co.jp" "www.hsbc.com" "www.cathaypacific.com" "www.hkex.com.hk")
+    random_domain=${domains[$RANDOM % ${#domains[@]}]}
+    local sni=${1:-$random_domain}
     if [[ ! -f "$CERT_DIR/cert.pem" ]]; then
         openssl req -x509 -nodes -newkey rsa:2048 -keyout "$CERT_DIR/privkey.pem" -out "$CERT_DIR/cert.pem" -days 3650 -subj "/CN=$sni" 2>/dev/null
     fi

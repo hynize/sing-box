@@ -20,8 +20,12 @@ if [[ "$MODE" != "reality" ]]; then
     fi
     read -p "Vless 本地端口 [默认随机]: " vp < /dev/tty; [ -z "$vp" ] && vp=$(shuf -i 10000-20000 -n 1)
 else
+    # 随机选择伪装域名
+    domains=("www.microsoft.com" "azure.microsoft.com" "www.apple.com" "swscan.apple.com" "www.intel.com" "www.debian.org" "www.docker.com" "www.hulu.com" "www.disneyplus.com" "www.amazon.com" "aws.amazon.com" "www.oracle.com" "www.jpmorganchase.com" "www.americanexpress.com" "images.apple.com" "www.samsung.com" "www.nvidia.com" "www.ikea.com" "www.sony.com" "www.toyota.com" "www.nintendo.co.jp" "www.hsbc.com" "www.cathaypacific.com" "www.hkex.com.hk")
+    random_domain=${domains[$RANDOM % ${#domains[@]}]}
+    
     read -p "Reality 监听端口 [默认 443]: " rp < /dev/tty; [ -z "$rp" ] && rp=443
-    read -p "Reality 目标地址 [默认 yahoo.com:443]: " rd < /dev/tty; [ -z "$rd" ] && rd="yahoo.com:443"
+    read -p "Reality 目标地址 [默认 $random_domain:443]: " rd < /dev/tty; [ -z "$rd" ] && rd="$random_domain:443"
 fi
 
 read -p "UDP 端口 (Hy2/Tuic) [默认随机]: " up < /dev/tty; [ -z "$up" ] && up=$(shuf -i 20000-60000 -n 1)
