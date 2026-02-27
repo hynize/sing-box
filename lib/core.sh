@@ -1,5 +1,5 @@
 #!/bin/bash
-# Small-Hacker Core Library - Modular Proxy Management
+# Small-Hacker Core Library v2.1 - Modular & Intelligent Proxy Management
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; CYAN='\033[0;36m'; NC='\033[0m'
 WORKDIR="$HOME/.cyber-proxy"; BIN_DIR="$WORKDIR/bin"; CONFIG_FILE="$WORKDIR/config.json"
 SB_BINARY="$BIN_DIR/sing-box"; CF_BINARY="$BIN_DIR/cloudflared"; CERT_DIR="$WORKDIR/cert"
@@ -7,6 +7,23 @@ SB_BINARY="$BIN_DIR/sing-box"; CF_BINARY="$BIN_DIR/cloudflared"; CERT_DIR="$WORK
 get_arch() { case "$(uname -m)" in x86_64) echo "amd64" ;; aarch64|arm64) echo "arm64" ;; *) echo "unknown" ;; esac; }
 
 init_dirs() { mkdir -p "$BIN_DIR" "$CERT_DIR"; }
+
+# Pre-Audit: Environment & UDP Check
+pre_audit() {
+    echo -e "${BLUE}[Audit] Performing system health check...${NC}"
+    # Check for UDP support (basic test)
+    if timeout 2 bash -c 'cat < /dev/null > /dev/udp/8.8.8.8/53' 2>/dev/null; then
+        echo -e "${GREEN}[OK] UDP traffic appears to be allowed.${NC}"
+    else
+        echo -e "${YELLOW}[WARN] UDP might be blocked by firewall. Hy2/Tuic may fail.${NC}"
+    fi
+    # Check for port conflicts
+    for port in 443 80 8080; do
+        if ss -tuln | grep -q ":$port "; then
+            echo -e "${YELLOW}[WARN] Port $port is already in use.${NC}"
+        fi
+    done
+}
 
 download_components() {
     local ARCH=$(get_arch)
